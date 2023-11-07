@@ -5,13 +5,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 var (
-	BOT_TOKEN      = "MTE1NDUxMDI3MzM3MDEzNjYxNg.GP8m_i.RGXjIAHeOL51dg2h690x1pJBkWvfwcwKhVGKGE"
+	BOT_TOKEN      = os.Getenv("BUNTY_BOT_TOKEN")
 	BOT_ID         = ""
 	QUOTE_API      = "https://api.quotable.io/random"
 	discordSession *discordgo.Session

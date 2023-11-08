@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -9,13 +11,16 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/redis/go-redis/v9"
 )
 
 var (
 	BOT_TOKEN      = os.Getenv("BUNTY_BOT_TOKEN")
 	BOT_ID         = ""
 	QUOTE_API      = "https://api.quotable.io/random"
+	REDIS_URL      = os.Getenv("REDIS_URL")
 	discordSession *discordgo.Session
+	redisClient    *redis.Client
 )
 
 type Quote struct {
@@ -27,6 +32,17 @@ type Quote struct {
 	Length       int      `json:"length"`
 	DateAdded    string   `json:"dateAdded"`
 	DateModified string   `json:"dateModified"`
+}
+
+func activityHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Author.ID == BOT_ID {
+		return
+	}
+
+	authorId := m.Author.ID
+	authorKey := fmt.Sprintf("AuthorActivityCount::%v", authorId)
+
+	redisClient.Incr(context.Background(), authorKey)
 }
 
 func pingMessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -98,12 +114,21 @@ func onReady(s *discordgo.Session, r *discordgo.Ready) {
 
 func main() {
 	var err error
+
+	opt, err := redis.ParseURL(REDIS_URL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	redisClient = redis.NewClient(opt)
+
 	discordSession, err = discordgo.New("Bot " + BOT_TOKEN)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	discordSession.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsGuildPresences
+	discordSession.AddHandler(activityHandler)
 	discordSession.AddHandler(pingMessageHandler)
 	discordSession.AddHandler(quoteHandler)
 	discordSession.AddHandler(mithooHandler)

@@ -35,7 +35,7 @@ type Quote struct {
 }
 
 func activityHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == BOT_ID {
+	if m.Author.ID == BOT_ID || strings.HasPrefix(m.Content, "!") {
 		return
 	}
 
@@ -88,28 +88,25 @@ func mithooHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func whatGameAmIPlayingHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+func onReady(s *discordgo.Session, r *discordgo.Ready) {
+	BOT_ID = s.State.User.ID
+	s.StateEnabled = true
+}
+
+func messageCountListener(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == BOT_ID {
 		return
 	}
 
-	if strings.HasPrefix(m.Content, "!game") {
-		presence, err := s.State.Presence(m.GuildID, m.Author.ID)
+	if strings.HasPrefix(m.Content, "!mc") {
+		activityData := redisClient.Get(context.Background(), fmt.Sprintf("AuthorActivityCount::%v", m.Author.ID))
+		res, err := activityData.Result()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		if len(presence.Activities) > 0 {
-			for _, activity := range presence.Activities {
-				println(activity.ApplicationID, " ", activity.Name)
-			}
-		}
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Your recentMessageCount: %v", res))
 	}
-}
-
-func onReady(s *discordgo.Session, r *discordgo.Ready) {
-	BOT_ID = s.State.User.ID
-	s.StateEnabled = true
 }
 
 func main() {
@@ -132,7 +129,7 @@ func main() {
 	discordSession.AddHandler(pingMessageHandler)
 	discordSession.AddHandler(quoteHandler)
 	discordSession.AddHandler(mithooHandler)
-	discordSession.AddHandler(whatGameAmIPlayingHandler)
+	discordSession.AddHandler(messageCountListener)
 	discordSession.AddHandler(onReady)
 
 	discordSession.Open()

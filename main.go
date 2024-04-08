@@ -1,26 +1,22 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/redis/go-redis/v9"
 )
 
 var (
-	BOT_TOKEN      = os.Getenv("BUNTY_BOT_TOKEN")
-	BOT_ID         = ""
-	QUOTE_API      = "https://api.quotable.io/random"
-	REDIS_URL      = os.Getenv("REDIS_URL")
-	discordSession *discordgo.Session
-	redisClient    *redis.Client
+	BOT_TOKEN         = os.Getenv("BUNTY_BOT_TOKEN")
+	BOT_ID            = ""
+	QUOTE_API         = "https://api.quotable.io/random"
+	REDIS_URL         = os.Getenv("REDIS_URL")
+	TESTING_SERVER_ID = "1119670816376889414"
+	discordSession    *discordgo.Session
 )
 
 type Quote struct {
@@ -34,17 +30,10 @@ type Quote struct {
 	DateModified string   `json:"dateModified"`
 }
 
-func activityHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == BOT_ID || strings.HasPrefix(m.Content, "!") {
-		return
-	}
-
-	authorId := m.Author.ID
-	authorKey := fmt.Sprintf("AuthorActivityCount::%v", authorId)
-
-	redisClient.Incr(context.Background(), authorKey)
-}
-
+/*
+Message Handlers
+----------------------------------------------------------
+*/
 func pingMessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == BOT_ID {
 		return
@@ -79,7 +68,7 @@ func quoteHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func mithooHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == BOT_ID {
+	if m.Author.ID == BOT_ID || m.GuildID != TESTING_SERVER_ID {
 		return
 	}
 
@@ -88,36 +77,17 @@ func mithooHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
+/*
+OnReady
+----------------------------------------------------------
+*/
 func onReady(s *discordgo.Session, r *discordgo.Ready) {
 	BOT_ID = s.State.User.ID
 	s.StateEnabled = true
 }
 
-func messageCountListener(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == BOT_ID {
-		return
-	}
-
-	if strings.HasPrefix(m.Content, "!mc") {
-		activityData := redisClient.Get(context.Background(), fmt.Sprintf("AuthorActivityCount::%v", m.Author.ID))
-		res, err := activityData.Result()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Your recentMessageCount: %v", res))
-	}
-}
-
 func main() {
 	var err error
-
-	opt, err := redis.ParseURL(REDIS_URL)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	redisClient = redis.NewClient(opt)
 
 	discordSession, err = discordgo.New("Bot " + BOT_TOKEN)
 	if err != nil {
@@ -125,11 +95,9 @@ func main() {
 	}
 
 	discordSession.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsGuildPresences
-	discordSession.AddHandler(activityHandler)
 	discordSession.AddHandler(pingMessageHandler)
 	discordSession.AddHandler(quoteHandler)
 	discordSession.AddHandler(mithooHandler)
-	discordSession.AddHandler(messageCountListener)
 	discordSession.AddHandler(onReady)
 
 	discordSession.Open()

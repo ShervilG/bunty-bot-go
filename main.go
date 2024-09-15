@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
-	"io"
+	"fmt"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/bwmarrin/discordgo"
@@ -13,21 +11,9 @@ import (
 var (
 	BOT_TOKEN         = os.Getenv("BUNTY_BOT_TOKEN")
 	BOT_ID            = ""
-	QUOTE_API         = "https://api.quotable.io/random"
 	TESTING_SERVER_ID = "1119670816376889414"
 	discordSession    *discordgo.Session
 )
-
-type Quote struct {
-	ID           string   `json:"_id"`
-	Content      string   `json:"content"`
-	Author       string   `json:"author"`
-	Tags         []string `json:"tags"`
-	AuthorSlug   string   `json:"authorSlug"`
-	Length       int      `json:"length"`
-	DateAdded    string   `json:"dateAdded"`
-	DateModified string   `json:"dateModified"`
-}
 
 /*
 Message Handlers
@@ -43,29 +29,6 @@ func pingMessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func quoteHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == BOT_ID {
-		return
-	}
-
-	if m.Content == "!mot" || m.Content == "!quote" {
-		resp, err := http.Get(QUOTE_API)
-		if err != nil {
-			println(err)
-		}
-
-		body, error := io.ReadAll(resp.Body)
-		if error != nil {
-			println(error)
-		}
-
-		var quote Quote
-		json.Unmarshal(body, &quote)
-
-		_, _ = s.ChannelMessageSend(m.ChannelID, quote.Content)
-	}
-}
-
 func mithooHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == BOT_ID || m.GuildID != TESTING_SERVER_ID {
 		return
@@ -73,6 +36,16 @@ func mithooHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if m.Content == "!mithoo" {
 		_, _ = s.ChannelMessageSend(m.ChannelID, "Hanji bhai jiiiii")
+	}
+}
+
+func greetingsHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Author.ID == BOT_ID {
+		return
+	}
+
+	if m.Content == "!hello" {
+		_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Hello %v", m.Author.Username))
 	}
 }
 
@@ -95,8 +68,8 @@ func main() {
 
 	discordSession.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsGuildPresences
 	discordSession.AddHandler(pingMessageHandler)
-	discordSession.AddHandler(quoteHandler)
 	discordSession.AddHandler(mithooHandler)
+	discordSession.AddHandler(greetingsHandler)
 	discordSession.AddHandler(onReady)
 
 	discordSession.Open()

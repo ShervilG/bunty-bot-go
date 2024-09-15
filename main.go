@@ -14,7 +14,6 @@ var (
 	BOT_TOKEN         = os.Getenv("BUNTY_BOT_TOKEN")
 	BOT_ID            = ""
 	QUOTE_API         = "https://api.quotable.io/random"
-	REDIS_URL         = os.Getenv("REDIS_URL")
 	TESTING_SERVER_ID = "1119670816376889414"
 	discordSession    *discordgo.Session
 )

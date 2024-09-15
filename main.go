@@ -9,10 +9,11 @@ import (
 )
 
 var (
-	BOT_TOKEN         = os.Getenv("BUNTY_BOT_TOKEN")
-	BOT_ID            = ""
-	TESTING_SERVER_ID = "1119670816376889414"
-	discordSession    *discordgo.Session
+	BOT_TOKEN                    = os.Getenv("BUNTY_BOT_TOKEN")
+	BOT_ID                       = ""
+	TESTING_SERVER_ID            = "1119670816376889414"
+	GUILD_WELCOME_CHANNEL_ID_MAP = map[string]string{"710530782795399230": "711113197054328852"}
+	discordSession               *discordgo.Session
 )
 
 /*
@@ -50,6 +51,19 @@ func greetingsHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
+func newJoinerHandler(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
+	if m.User.ID == BOT_ID {
+		return
+	}
+
+	welcomeChannelId, exists := GUILD_WELCOME_CHANNEL_ID_MAP[m.GuildID]
+	if !exists {
+		return
+	}
+
+	s.ChannelMessageSend(welcomeChannelId, fmt.Sprintf("Welcome to the server %v", m.User.Username))
+}
+
 /*
 OnReady
 ----------------------------------------------------------
@@ -71,6 +85,7 @@ func main() {
 	discordSession.AddHandler(pingMessageHandler)
 	discordSession.AddHandler(mithooHandler)
 	discordSession.AddHandler(greetingsHandler)
+	discordSession.AddHandler(newJoinerHandler)
 	discordSession.AddHandler(onReady)
 
 	discordSession.Open()

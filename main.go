@@ -44,8 +44,9 @@ func greetingsHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if m.Content == "!hello" {
-		_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Hello %v", m.Author.Username))
+	if m.Content == "!hello" || m.Content == "!hi" {
+		s.MessageReactionAdd(m.ChannelID, m.ID, "👋")
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Hello %v", m.Author.Username))
 	}
 }
 

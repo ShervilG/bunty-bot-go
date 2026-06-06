@@ -65,7 +65,7 @@ func newJoinerHandler(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
 }
 
 /*
-OnReady
+OnReadyMethod
 ----------------------------------------------------------
 */
 func onReady(s *discordgo.Session, r *discordgo.Ready) {
